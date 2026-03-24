@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Code Snippet Puzzle</title>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1 class="title">Code Snippet Puzzle</h1>
+        <div id="progress" class="progress" style="display: none"></div>
+      </div>
+
+      <div id="card" class="card"></div>
+    </div>
+
+    <script>
+      const questions = [
+        {
+          id: 1,
+          code: "const add = (a, b) => a + b;\nconsole.log(add(2, 3));",
+          question: "What is logged?",
+          options: ["2", "3", "5", "undefined"],
+          answer: 2,
+        },
+        {
+          id: 2,
+          code: "for (let i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 100);\n}",
+          question: "What are outputs?",
+          options: ["0 1 2", "3 3 3", "undefined", "Error"],
+          answer: 0,
+        },
+        {
+          id: 3,
+          code: "const arr = [1, 2, 3];\nconst [first, ...rest] = arr;\nconsole.log(rest);",
+          question: "What is printed?",
+          options: ["[1, 2, 3]", "[2, 3]", "[3]", "[]"],
+          answer: 1,
+        },
+        {
+          id: 4,
+          code: "let a = 1;\nfunction f() {\n  a = 2;\n  return;\n  function a() {}\n}\nf();\nconsole.log(a);",
+          question: "What is logged?",
+          options: ["1", "2", "undefined", "ReferenceError"],
+          answer: 0,
+        },
+        {
+          id: 5,
+          code: "const p = Promise.resolve(10);\np.then(v => v * 2)\n .then(v => console.log(v));",
+          question: "What logs?",
+          options: ["10", "20", "Promise {20}", "undefined"],
+          answer: 1,
+        },
+        {
+          id: 6,
+          code: "const x = [1, 2, 3];\nconst y = x;\ny.push(4);\nconsole.log(x.length);",
+          question: "What is length?",
+          options: ["3", "4", "undefined", "Error"],
+          answer: 1,
+        },
+      ];
+
+      function shuffle(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
+      const shuffledQuestions = shuffle(questions);
+
+      let roundIndex = 0;
+      let score = 0;
+      let countdown = 10;
+      let showCode = true;
+      let selectedOption = null;
+      let timerId = null;
+
+      const card = document.getElementById("card");
+      const progress = document.getElementById("progress");
+
+      function renderStart() {
+        progress.style.display = "none";
+        card.innerHTML = `
+        <h2 class="subtitle">Welcome!</h2>
+        <p class="hint">You will be shown a code snippet for 10 seconds. Memorize it, then answer the question that follows.</p>
+        <button class="button" id="start-btn">Start Game</button>
+      `;
+        document.getElementById("start-btn").addEventListener("click", () => {
+          roundIndex = 0;
+          score = 0;
+          countdown = 10;
+          showCode = true;
+          selectedOption = null;
+          renderRound();
+        });
+      }
+
+      function renderEnd() {
+        progress.style.display = "none";
+        card.innerHTML = `
+        <h2 class="subtitle">Game Over!</h2>
+        <p class="hint">Your final score: <strong>${score}</strong> out of ${shuffledQuestions.length}</p>
+        <button class="button" id="restart-btn">Play Again</button>
+      `;
+        document
+          .getElementById("restart-btn")
+          .addEventListener("click", renderStart);
+      }
+
+      function renderRound() {
+        if (roundIndex >= shuffledQuestions.length) {
+          clearTimeout(timerId);
+          renderEnd();
+          return;
+        }
+
+        progress.style.display = "block";
+        progress.textContent = `Question ${roundIndex + 1} of ${shuffledQuestions.length}`;
+
+        const current = shuffledQuestions[roundIndex];
+        selectedOption = null;
+
+        if (showCode) {
+          card.innerHTML = `
+          <p class="hint">Memorize the snippet... (${countdown}s)</p>
+          <pre class="code-block"><code>${current.code}</code></pre>
+        `;
+
+          timerId = setTimeout(() => {
+            countdown -= 1;
+            if (countdown <= 0) {
+              showCode = false;
+              countdown = 10;
+              renderRound();
+            } else {
+              renderRound();
+            }
+          }, 1000);
+        } else {
+          card.innerHTML = `
+          <form id="answer-form">
+            <p class="question">${current.question}</p>
+            <div class="options">
+              ${current.options
+                .map(
+                  (opt, i) => `
+                <label class="option-label">
+                  <input type="radio" name="answer" value="${i}"> ${opt}
+                </label>
+              `,
+                )
+                .join("")}
+            </div>
+            <button type="submit" class="button" id="submit-answer" disabled>Submit Answer</button>
+          </form>
+        `;
+
+          const form = document.getElementById("answer-form");
+          const submitButton = document.getElementById("submit-answer");
+          const radios = form.querySelectorAll('input[name="answer"]');
+
+          radios.forEach((radio) => {
+            radio.addEventListener("change", () => {
+              selectedOption = Number(radio.value);
+              submitButton.disabled = false;
+            });
+          });
+
+          form.addEventListener("submit", (event) => {
+            event.preventDefault();
+
+            if (selectedOption === null) return;
+            if (selectedOption === current.answer) score += 1;
+
+            roundIndex += 1;
+            showCode = true;
+            countdown = 10;
+            renderRound();
+          });
+        }
+      }
+
+      renderStart();
+    </script>
+  </body>
+</html>

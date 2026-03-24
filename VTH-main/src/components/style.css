@@ -1,0 +1,125 @@
+body {
+  margin: 0;
+  font-family:
+    "Poppins",
+    sans - serif;
+  background: linear - gradient(135deg, #0f2027, #203a43, #2c5364);
+  overflow: hidden;
+}
+
+.container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-align: center;
+}
+
+.title {
+  font-size: 3rem;
+  animation: flicker 1.5s infinite alternate;
+}
+
+@keyframes flicker {
+  from {
+    opacity: 0.7;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.glitch-text {
+  margin: 20px;
+  font-size: 1.2rem;
+  animation: shake 0.3s infinite;
+}
+
+@keyframes shake {
+  0% {
+    transform: translate(1px, 1px);
+  }
+
+  50% {
+    transform: translate(-1px, -2px);
+  }
+
+  100% {
+    transform: translate(1px, -1px);
+  }
+}
+
+.btn {
+  padding: 12px 24px;
+  background: #ff4b5c;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn:hover {
+  transform: scale(1.2) rotate(5deg);
+}
+
+.annoying-text {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+.hint {
+  margin-top: 20px;
+  color: #00ffcc;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.input {
+  margin-top: 20px;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+}
+
+.submit-btn {
+  margin-top: 10px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #4facfe;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.submit-btn:hover {
+  transform: scale(1.1);
+}
+
+.fake-links {
+  position: absolute;
+  bottom: 20px;
+  display: flex;
+  gap: 20px;
+  opacity: 0.4;
+}
+
+.fake-links span {
+  cursor: not - allowed;
+}
+
+.hidden {
+  color: transparent;
+  user-select: none;
+}
