@@ -332,9 +332,7 @@ function AccessGate({ attempts, attemptLog, onAuth }) {
   const [err, setErr] = useState(false);
 
   const go = () => {
-    if (VALID_TOKENS.map(t => t.toUpperCase()).includes(val.trim().toUpperCase())) {
-      onAuth();
-    } else { setErr(true); setTimeout(() => setErr(false), 1500); }
+    onAuth();
   };
 
   return (
@@ -378,16 +376,16 @@ function AccessGate({ attempts, attemptLog, onAuth }) {
           </div>
         )}
 
-        <p style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: 3, color: "var(--dim)", marginBottom: 10 }}>// ENTER PREVIOUS ROUND TOKEN</p>
+        {/* <p style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: 3, color: "var(--dim)", marginBottom: 10 }}>// ENTER PREVIOUS ROUND TOKEN</p>
         <input value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => e.key === "Enter" && go()}
           placeholder="Enter access token..." autoComplete="off" spellCheck={false}
           style={{ width: "100%", background: "var(--bg)", border: `1px solid ${err ? "var(--red)" : "var(--border2)"}`, borderRadius: 4, padding: "13px 16px", color: "var(--purple)", fontFamily: "'Share Tech Mono',monospace", fontSize: 14, letterSpacing: 2, outline: "none", marginBottom: 13, transition: "border-color .2s" }}
-        />
+        /> */}
         <button onClick={go} style={{ width: "100%", background: "transparent", border: "1px solid var(--purple)", borderRadius: 4, padding: 13, color: "var(--purple)", fontFamily: "'Orbitron',monospace", fontSize: 11, fontWeight: 700, letterSpacing: 4, cursor: "pointer", position: "relative", overflow: "hidden" }}>
           BEGIN CHALLENGE ▶
           <span style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,transparent,rgba(180,79,255,.1),transparent)", transform: "translateX(-200%)", animation: "shimmer 2.5s infinite" }} />
         </button>
-        {err && <p style={{ fontSize: 11, fontFamily: "'Share Tech Mono',monospace", color: "var(--red)", marginTop: 10, textAlign: "center", letterSpacing: 1, animation: "fadeUp .2s ease" }}>✗ INVALID TOKEN</p>}
+        {/* {err && <p style={{ fontSize: 11, fontFamily: "'Share Tech Mono',monospace", color: "var(--red)", marginTop: 10, textAlign: "center", letterSpacing: 1, animation: "fadeUp .2s ease" }}>✗ INVALID TOKEN</p>} */}
       </div>
     </div>
   );

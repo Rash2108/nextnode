@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./RegisterTeam.css";
+import { useNavigate } from "react-router-dom";
 
 const RegisterTeam = () => {
     const [formData, setFormData] = useState({
@@ -27,7 +28,7 @@ const RegisterTeam = () => {
 
         setShowConfirm(true);
     };
-
+    const navigate = useNavigate();
     const confirmSubmit = async () => {
         const payload = {
             event: "Next Node",
@@ -39,7 +40,7 @@ const RegisterTeam = () => {
         };
 
         try {
-            const res = await fetch("http://localhost:5000/api/register", {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/register`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -54,16 +55,9 @@ const RegisterTeam = () => {
                 return;
             }
 
-            alert("✅ Team Registered Successfully!");
+            // ✅ Redirect after success
+            navigate("/round1");
 
-            // reset form
-            setFormData({
-                teamName: "",
-                player1: "",
-                player2: "",
-            });
-
-            setShowConfirm(false);
         } catch (err) {
             console.error(err);
             alert("❌ Server error");
