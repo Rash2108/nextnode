@@ -415,7 +415,7 @@ function QuizScreen({ timeLeft, chosen, onAnswer, onFinish }) {
           setShowCode(false);
           return 10;
         }
-        return prev - 1;
+        return prev;
       });
     }, 1000);
 
@@ -433,7 +433,7 @@ function QuizScreen({ timeLeft, chosen, onAnswer, onFinish }) {
     if (q.typeQ !== "snippet") return;
 
     setShowCode(true);
-    setTimer(5); // reset for each snippet
+    setTimer(10); // reset for each snippet
 
     const interval = setInterval(() => {
       setTimer(prev => {
