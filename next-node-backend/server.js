@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import teamRoutes from "./routes/teamRoutes.js";
 import round1Routes from "./routes/round1Routes.js";
+import round2Routes from "./routes/round2Routes.js";
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ connectDB();
 // Routes
 app.use("/api", teamRoutes);
 app.use("/api", round1Routes);
+app.use("/api", round2Routes);
 
 // Test route
 app.get("/", (req, res) => {

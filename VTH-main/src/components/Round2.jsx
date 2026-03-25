@@ -1,4 +1,127 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+
+// ─── STATE & SYNC ──────────────────────────────────────────────────────────────
+const SK = "cc_round2_session";
+const TIME_LIMIT = 30 * 60; // 30 minutes
+
+const DEFAULT_SESSION = {
+  phase: "gate",
+  timeLeft: TIME_LIMIT,
+  attemptStart: null,
+  solved: {},
+  finalSolved: false,
+  score: 0,
+  solvedQuestions: [],
+};
+
+function fmtTime(s) {
+  const m = Math.floor(Math.max(0, s) / 60), sec = Math.max(0, s) % 60;
+  return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}
+
+const syncToServer = async (session) => {
+  try {
+    const teamName = localStorage.getItem("teamName") || "Unknown Team";
+    const overallUsed = TIME_LIMIT - session.timeLeft;
+
+    const payload = {
+      teamName,
+      ...session,
+      timeLeft: typeof session.timeLeft === "number" ? fmtTime(session.timeLeft) : session.timeLeft,
+      overallTimeUsed: fmtTime(overallUsed),
+      solvedQuestions: session.solvedQuestions ? session.solvedQuestions.map(q => ({
+        questionId: q.id,
+        timeUsed: typeof q.timeUsed === "number" ? fmtTime(q.timeUsed) : q.timeUsed
+      })) : []
+    };
+
+    await fetch(`${import.meta.env.VITE_API_URL}/api/round2`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error("Sync failed", err);
+  }
+};
+
+function loadSess() {
+  try {
+    const raw = localStorage.getItem(SK);
+    if (!raw) return { ...DEFAULT_SESSION };
+    let parsed = JSON.parse(raw);
+    if (typeof parsed === "string") parsed = JSON.parse(parsed);
+    const session = { ...DEFAULT_SESSION, ...parsed };
+    syncToServer(session);
+    return session;
+  } catch {
+    return { ...DEFAULT_SESSION };
+  }
+}
+
+function saveSess(s) {
+  try {
+    localStorage.setItem(SK, JSON.stringify(s));
+  } catch { }
+}
+
+function Corner({ color = "#e8a838" }) {
+  const b = { position: "absolute", width: 11, height: 11, borderColor: color, borderStyle: "solid", opacity: .5 };
+  return (<>
+    <span style={{ ...b, top: 7, left: 7, borderWidth: "1px 0 0 1px" }} />
+    <span style={{ ...b, top: 7, right: 7, borderWidth: "1px 1px 0 0" }} />
+    <span style={{ ...b, bottom: 7, left: 7, borderWidth: "0 0 1px 1px" }} />
+    <span style={{ ...b, bottom: 7, right: 7, borderWidth: "0 1px 1px 0" }} />
+  </>);
+}
+
+function AccessGate({ onAuth }) {
+  const [team, setTeam] = useState(() => localStorage.getItem("teamName") || "");
+  const [err, setErr] = useState(false);
+
+  const go = () => {
+    if (!team.trim()) { setErr(true); return; }
+    localStorage.setItem("teamName", team.trim());
+    onAuth();
+  };
+
+  const gold = "#e8a838";
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, background: "#040608", fontFamily: "'JetBrains Mono', monospace", color: "#b8cce0" }}>
+      <p style={{ fontSize: 10, letterSpacing: 6, color: "#3a5070", marginBottom: 14, textAlign: "center" }}>◈ VIRTUAL TREASURE HUNT · ROUND 2 ◈</p>
+      <h1 style={{ fontFamily: "'Orbitron', monospace", fontWeight: 900, fontSize: "clamp(22px,5vw,54px)", letterSpacing: 7, color: gold, textShadow: `0 0 40px ${gold}80`, textAlign: "center", marginBottom: 36 }}>
+        Next Node
+      </h1>
+
+      <div style={{ background: "#0a1018", border: "1px solid #1a2535", borderRadius: 8, padding: "32px 38px", width: "100%", maxWidth: 500, position: "relative" }}>
+        <Corner color={gold} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 22 }}>
+          {[["⏱", "30 MIN", "Time Limit"], ["❓", "9", "Puzzles"], ["🏆", "50", "Max Points"], ["🔑", "1st CHAR", "Master Key"]].map(([icon, v, label]) => (
+            <div key={label} style={{ background: "#040608", border: "1px solid #1a2535", borderRadius: 5, padding: "10px 12px", textAlign: "center" }}>
+              <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
+              <div style={{ fontFamily: "'Orbitron', monospace", fontSize: 13, fontWeight: 700, color: gold, letterSpacing: 1 }}>{v}</div>
+              <div style={{ fontSize: 9, color: "#3a5070", letterSpacing: 1, marginTop: 2 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ background: "#040608", border: `1px solid ${gold}33`, borderLeft: `2px solid ${gold}`, borderRadius: 4, padding: "10px 14px", marginBottom: 20, fontSize: 12, lineHeight: 1.9, color: "#e0eeff", opacity: .85 }}>
+          Solve 8 hints to gather clues. Then use the <strong style={{ color: gold }}>first character</strong> of each answer to unlock the Final Vault. Each hint gives 5 points, and the final vault gives 10 points. Time matters!
+        </div>
+
+        <p style={{ fontSize: 10, letterSpacing: 3, color: "#3a5070", marginBottom: 10 }}>// ENTER TEAM NAME</p>
+        <input value={team} onChange={e => { setTeam(e.target.value); setErr(false); }} onKeyDown={e => e.key === "Enter" && go()}
+          placeholder="Team Name..." autoComplete="off" spellCheck={false}
+          style={{ width: "100%", background: "#040608", border: `1px solid ${err ? "#ff4f4f" : "#1a2535"}`, borderRadius: 4, padding: "13px 16px", color: gold, fontFamily: "'JetBrains Mono', monospace", fontSize: 14, letterSpacing: 2, outline: "none", marginBottom: 20, transition: "border-color .2s" }}
+        />
+
+        <button onClick={go} style={{ width: "100%", background: "transparent", border: `1px solid ${gold}`, borderRadius: 4, padding: 13, color: gold, fontFamily: "'Orbitron', monospace", fontSize: 11, fontWeight: 700, letterSpacing: 4, cursor: "pointer", position: "relative", overflow: "hidden" }}>
+          BEGIN CHALLENGE ▶
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ─── PUZZLE DATA ───────────────────────────────────────────────────────────────
 // Participants visit a real GFG/external page, find the described snippet,
@@ -475,21 +598,7 @@ const HINTS = [
     taskLine3: "Recover THETA's clue.",
     answer: "5",
     confirmHint: "Absolute value keeps the distance from zero, not the sign.",
-  },
-  {
-    id: "I",
-    label: "IOTA",
-    color: "#7dff7a",
-    language: "Java",
-    site: "GeeksforGeeks",
-    siteUrl: "https://www.geeksforgeeks.org/",
-    pageHint: "Somewhere on GeeksforGeeks, a Java lesson about methods hides IOTA's clue.",
-    taskLine1: "IOTA found a Java example where methods call each other in sequence.",
-    taskLine2: "After that chain finishes, one final message appears like the last signal on the screen.",
-    taskLine3: "Recover IOTA's clue.",
-    answer: "In Method D",
-    confirmHint: "The answer is the final printed line, after the earlier method chain ends.",
-  },
+  }
 ];
 
 // Master key = first char of each answer A→H
@@ -497,7 +606,7 @@ const HINTS = [
 const FINAL_PASSWORD = "B5F5313G5";
 // Actually let's use a simpler approach: just first char of each
 // B 5 F 5 3 1 G 5  → "B5F531G5"
-const MASTER_KEY = "B5F531G5";
+const MASTER_KEY = "B5F531P5";
 const SECRET_FLAG = "CTF{g33ks_hunt3r_m4st3r_2024}";
 
 function shuffleArray(arr) {
@@ -839,17 +948,76 @@ function CenterCell({ allSolved, onFinalSubmit, isSolved }) {
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 export default function Round2() {
+  const [sess, setSess] = useState(() => loadSess());
   const [layout] = useState(() => shuffleArray(HINTS));
-  const [solved, setSolved] = useState({});
-  const [finalSolved, setFinalSolved] = useState(false);
-  const solvedCount = Object.keys(solved).length;
+
+  const update = (obj, doSync = false) => {
+    setSess(prev => {
+      const next = { ...prev, ...obj };
+      saveSess(next);
+      if (doSync) syncToServer(next);
+      return next;
+    });
+  };
+
+  const solvedCount = Object.keys(sess.solved).length;
   const allSolved = solvedCount === 8;
   const gold = "#e8a838";
 
-  const handleHintSolve = (id, answer) => setSolved(p => ({ ...p, [id]: answer }));
+  const timerRef = useRef(null);
+  useEffect(() => {
+    if (sess.phase === "quiz") {
+      timerRef.current = setInterval(() => {
+        setSess(prev => {
+          if (prev.phase !== "quiz") { clearInterval(timerRef.current); return prev; }
+          const t = prev.timeLeft - 1;
+          if (t <= 0) {
+            clearInterval(timerRef.current);
+            const next = { ...prev, timeLeft: 0, phase: "timed-out" };
+            saveSess(next);
+            syncToServer(next);
+            return next;
+          }
+          const next = { ...prev, timeLeft: t };
+          saveSess(next);
+          return next;
+        });
+      }, 1000);
+    } else {
+      clearInterval(timerRef.current);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [sess.phase]);
+
+  const handleAuth = () => {
+    update({ phase: "quiz", attemptStart: Date.now() }, true);
+  };
+
+  const handleHintSolve = (id, answer) => {
+    if (sess.solved[id]) return;
+    const sumPrevTimes = sess.solvedQuestions.reduce((acc, q) => acc + (typeof q.timeUsed === "number" ? q.timeUsed : 0), 0);
+    const totalTimeElapsed = TIME_LIMIT - sess.timeLeft;
+    const timeUsedForThisQuestion = Math.max(0, totalTimeElapsed - sumPrevTimes);
+
+    update({
+      solved: { ...sess.solved, [id]: answer },
+      solvedQuestions: [...sess.solvedQuestions, { id, timeUsed: timeUsedForThisQuestion }],
+      score: sess.score + 5
+    }, true);
+  };
 
   const handleFinalSolve = () => {
-    setFinalSolved(true);
+    const sumPrevTimes = sess.solvedQuestions.reduce((acc, q) => acc + (typeof q.timeUsed === "number" ? q.timeUsed : 0), 0);
+    const totalTimeElapsed = TIME_LIMIT - sess.timeLeft;
+    const timeUsedForThisQuestion = Math.max(0, totalTimeElapsed - sumPrevTimes);
+
+    update({
+      finalSolved: true,
+      phase: "win",
+      solvedQuestions: [...sess.solvedQuestions, { id: "FINAL_VAULT", timeUsed: timeUsedForThisQuestion }],
+      score: sess.score + 10
+    }, true);
+
     console.clear();
     console.log("%c╔══════════════════════════════════════════╗", `color:${gold};font-size:14px;`);
     console.log("%c║   🏆  GFG TREASURE UNLOCKED  🏆          ║", `color:${gold};font-size:14px;font-weight:bold;`);
@@ -871,6 +1039,20 @@ export default function Round2() {
     if (i === 4) { gridCells.push({ type: "center" }); continue; }
     const hi = i < 4 ? i : i - 1;
     gridCells.push({ type: "hint", hint: layout[hi] });
+  }
+
+  if (sess.phase === "gate") {
+    return <AccessGate onAuth={handleAuth} />;
+  }
+
+  if (sess.phase === "timed-out") {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#ff4f4f", fontFamily: "'Orbitron', monospace", background: "#040608" }}>
+        <h1>TIME IS UP</h1>
+        <p style={{ marginTop: 20, color: "#b8cce0", fontFamily: "'JetBrains Mono', monospace" }}>Your progress has been saved.</p>
+        <p style={{ marginTop: 10, color: "#e8a838", fontFamily: "'JetBrains Mono', monospace" }}>Final Score: {sess.score} / 50</p>
+      </div>
+    );
   }
 
   return (
@@ -917,7 +1099,10 @@ export default function Round2() {
       }}>
 
         {/* ── HEADER ── */}
-        <header style={{ textAlign: "center", marginBottom: 36 }}>
+        <header style={{ textAlign: "center", marginBottom: 36, position: "relative", width: "100%", maxWidth: 1140 }}>
+          <div style={{ position: "absolute", top: 0, right: 0, fontFamily: "'Orbitron', monospace", fontSize: 24, color: sess.timeLeft <= 300 ? "#ff4f4f" : "#00cfff", fontWeight: 700, textShadow: "0 0 10px rgba(0, 207, 255, 0.4)" }}>
+            {fmtTime(sess.timeLeft)}
+          </div>
           <div style={{ fontSize: 10, letterSpacing: 6, color: "#2a3a50", marginBottom: 10 }}>
             ◈ VIRTUAL TREASURE HUNT ◈
           </div>
@@ -966,15 +1151,15 @@ export default function Round2() {
                 key="center"
                 allSolved={allSolved}
                 onFinalSubmit={handleFinalSolve}
-                isSolved={finalSolved}
+                isSolved={sess.finalSolved}
               />
             ) : (
               <HintCell
                 key={cell.hint.id}
                 hint={cell.hint}
-                isUnlocked={!!solved[cell.hint.id]}
+                isUnlocked={!!sess.solved[cell.hint.id]}
                 onSubmit={handleHintSolve}
-                solvedAnswer={solved[cell.hint.id]}
+                solvedAnswer={sess.solved[cell.hint.id]}
               />
             )
           )}

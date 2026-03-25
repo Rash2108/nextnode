@@ -268,7 +268,7 @@ function loadSess() {
     return { ...DEFAULT };
   }
 }
-function saveSess(s) { try { localStorage.setItem(SK, JSON.stringify(s)); syncToServer(s); } catch { } }
+function saveSess(s) { try { localStorage.setItem(SK, JSON.stringify(s)); } catch { } }
 
 // ─── STYLES ────────────────────────────────────────────────────────────────────
 const STYLES = `
@@ -436,10 +436,12 @@ function ScorePanel({ attemptLog, currentEntry, compact = false }) {
 
 // ─── ACCESS GATE ───────────────────────────────────────────────────────────────
 function AccessGate({ attempts, attemptLog, onAuth }) {
-  const [val, setVal] = useState("");
+  const [team, setTeam] = useState(() => localStorage.getItem("teamName") || "");
   const [err, setErr] = useState(false);
 
   const go = () => {
+    if (!team.trim()) { setErr(true); return; }
+    localStorage.setItem("teamName", team.trim());
     onAuth();
   };
 
@@ -484,16 +486,15 @@ function AccessGate({ attempts, attemptLog, onAuth }) {
           </div>
         )}
 
-        {/* <p style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: 3, color: "var(--dim)", marginBottom: 10 }}>// ENTER PREVIOUS ROUND TOKEN</p>
-        <input value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => e.key === "Enter" && go()}
-          placeholder="Enter access token..." autoComplete="off" spellCheck={false}
-          style={{ width: "100%", background: "var(--bg)", border: `1px solid ${err ? "var(--red)" : "var(--border2)"}`, borderRadius: 4, padding: "13px 16px", color: "var(--purple)", fontFamily: "'Share Tech Mono',monospace", fontSize: 14, letterSpacing: 2, outline: "none", marginBottom: 13, transition: "border-color .2s" }}
-        /> */}
+        <p style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: 3, color: "var(--dim)", marginBottom: 10 }}>// ENTER TEAM NAME</p>
+        <input value={team} onChange={e => {setTeam(e.target.value); setErr(false);}} onKeyDown={e => e.key === "Enter" && go()}
+          placeholder="Team Name..." autoComplete="off" spellCheck={false}
+          style={{ width: "100%", background: "var(--bg)", border: `1px solid ${err ? "var(--red)" : "var(--border2)"}`, borderRadius: 4, padding: "13px 16px", color: "var(--purple)", fontFamily: "'Share Tech Mono',monospace", fontSize: 14, letterSpacing: 2, outline: "none", marginBottom: 20, transition: "border-color .2s" }}
+        />
         <button onClick={go} style={{ width: "100%", background: "transparent", border: "1px solid var(--purple)", borderRadius: 4, padding: 13, color: "var(--purple)", fontFamily: "'Orbitron',monospace", fontSize: 11, fontWeight: 700, letterSpacing: 4, cursor: "pointer", position: "relative", overflow: "hidden" }}>
           BEGIN CHALLENGE ▶
           <span style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,transparent,rgba(180,79,255,.1),transparent)", transform: "translateX(-200%)", animation: "shimmer 2.5s infinite" }} />
         </button>
-        {/* {err && <p style={{ fontSize: 11, fontFamily: "'Share Tech Mono',monospace", color: "var(--red)", marginTop: 10, textAlign: "center", letterSpacing: 1, animation: "fadeUp .2s ease" }}>✗ INVALID TOKEN</p>} */}
       </div>
     </div>
   );
@@ -999,10 +1000,11 @@ export default function Round1() {
   const [sess, setSess] = useState(() => loadSess());
   const { phase, authed, attempts, timeLeft, chosen, timedOut, finalCode, attemptStart, attemptLog } = sess;
 
-  const update = (patch) => {
+  const update = (patch, doSync = false) => {
     setSess(prev => {
       const next = { ...prev, ...patch };
       saveSess(next);
+      if (doSync) syncToServer(next);
       return next;
     });
   };
@@ -1026,6 +1028,7 @@ export default function Round1() {
             const entry = { attemptNo: prev.attempts + 1, correctCount: correct, pct, timeUsed: TIME_LIMIT, score, won: false, submittedCode: "(timed out)", expectedCode: expCode, ts: Date.now() };
             const next = { ...prev, timeLeft: 0, phase: "timed-out", timedOut: true, attemptLog: [...prev.attemptLog, entry] };
             saveSess(next);
+            syncToServer(next);
             return next;
           }
           const next = { ...prev, timeLeft: t };
@@ -1041,20 +1044,20 @@ export default function Round1() {
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleAuth = () => {
-    if (attempts >= MAX_ATTEMPTS) { update({ phase: "locked" }); return; }
-    update({ phase: "quiz", authed: true, attemptStart: Date.now() });
+    if (attempts >= MAX_ATTEMPTS) { update({ phase: "locked" }, true); return; }
+    update({ phase: "quiz", authed: true, attemptStart: Date.now() }, true);
   };
 
   const handleAnswer = (qIdx, optIdx) => {
     const newChosen = [...chosen]; newChosen[qIdx] = optIdx;
-    update({ chosen: newChosen });
+    update({ chosen: newChosen }, true);
   };
 
   const handleQuizFinish = (finalChosen, wasTimedOut) => {
     if (wasTimedOut) {
-      update({ phase: "timed-out", chosen: finalChosen, timedOut: true });
+      update({ phase: "timed-out", chosen: finalChosen, timedOut: true }, true);
     } else {
-      update({ phase: "code-entry", chosen: finalChosen });
+      update({ phase: "code-entry", chosen: finalChosen }, true);
     }
   };
 
@@ -1065,20 +1068,20 @@ export default function Round1() {
     if (correct) {
       const score = calcAttemptScore(QUESTIONS.length, timeUsed, submittedCode, expectedCode);
       const entry = { attemptNo: attempts + 1, correctCount: QUESTIONS.length, pct: 100, timeUsed, score, won: true, submittedCode, expectedCode, ts: Date.now() };
-      update({ phase: "win", finalCode: submittedCode, attempts: attempts + 1, attemptLog: [...attemptLog, entry] });
+      update({ phase: "win", finalCode: submittedCode, attempts: attempts + 1, attemptLog: [...attemptLog, entry] }, true);
     } else {
       const score = calcAttemptScore(correctCount || 0, timeUsed, submittedCode, expectedCode);
       const entry = { attemptNo: attempts + 1, correctCount: correctCount || 0, pct: pct || 0, timeUsed, score, won: false, submittedCode, expectedCode, ts: Date.now() };
       const newAttempts = attempts + 1;
       const nextPhase = newAttempts >= MAX_ATTEMPTS ? "locked" : "code-entry";
-      update({ attempts: newAttempts, finalCode: submittedCode, phase: nextPhase, attemptLog: [...attemptLog, entry] });
+      update({ attempts: newAttempts, finalCode: submittedCode, phase: nextPhase, attemptLog: [...attemptLog, entry] }, true);
     }
   };
 
   const handleRestart = () => {
-    if (attempts >= MAX_ATTEMPTS) { update({ phase: "locked" }); return; }
+    if (attempts >= MAX_ATTEMPTS) { update({ phase: "locked" }, true); return; }
     // Keep timer running — only reset answers and record new attemptStart
-    update({ phase: "quiz", chosen: Array(10).fill(null), attemptStart: Date.now() });
+    update({ phase: "quiz", chosen: Array(10).fill(null), attemptStart: Date.now() }, true);
   };
 
   return (
