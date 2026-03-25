@@ -17,8 +17,8 @@ app.use(express.json());
 connectDB();
 
 // Routes
-app.use("api", teamRoutes);
-app.use("api", round1Routes);
+app.use("/api", teamRoutes);
+app.use("/api", round1Routes);
 
 // Test route
 app.get("/", (req, res) => {
