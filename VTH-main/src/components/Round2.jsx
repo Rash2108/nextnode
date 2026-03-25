@@ -550,12 +550,12 @@ const HINTS = [
     language: "JavaScript",
     site: "GeeksforGeeks",
     siteUrl: "https://www.geeksforgeeks.org/javascript/",
-    pageHint: "Somewhere on GeeksforGeeks, a JavaScript lesson about asynchronous code hides EPSILON's clue.",
-    taskLine1: "EPSILON found a JavaScript example using a function with a delay.",
-    taskLine2: "The function waits for 3 seconds, then sends an object with name and age to a callback.",
-    taskLine3: "What gets printed in the console after the delay?",
-    answer: "Data: { name: 'Aman', age: 21 }",
-    confirmHint: "The callback logs the object after the timeout completes.",
+    pageHint: "Somewhere on GeeksforGeeks, a JavaScript lesson about array methods hides EPSILON's clue.",
+    taskLine1: "EPSILON found a JavaScript example that combines elements of an array into a single string.",
+    taskLine2: "The array contains four items: HTML, CSS, JS, and React, joined using a special symbol.",
+    taskLine3: "What string gets printed?",
+    answer: "HTML|CSS|JS|React",
+    confirmHint: "The join() method places the given separator between each element.",
   },
   {
     id: "F",
@@ -606,7 +606,7 @@ const HINTS = [
 const FINAL_PASSWORD = "B5F5313G5";
 // Actually let's use a simpler approach: just first char of each
 // B 5 F 5 3 1 G 5  → "B5F531G5"
-const MASTER_KEY = "B5F531P5";
+const MASTER_KEY = "BCT1HJ11";
 const SECRET_FLAG = "CTF{g33ks_hunt3r_m4st3r_2024}";
 
 function shuffleArray(arr) {
