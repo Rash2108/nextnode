@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from "react";
+import { useLocation } from "react-router-dom";
+
+
 
 // ─── CONFIG ────────────────────────────────────────────────────────────────────
 const VALID_TOKENS = ["LEE", "VAULT_OMEGA_PRIME", "CTF{g33ks_hunt3r_m4st3r_2024}"];
@@ -28,25 +31,16 @@ const SK = "cc_session_v3";
 // }
 
 function calcAttemptScore(correctCount, timeUsed, submittedCode, expectedCode) {
-  const accuracy = correctCount / QUESTIONS.length;
-
-  const accPoints = accuracy * 70;
-
-  const speedBonus = Math.max(0, (1 - timeUsed / TIME_LIMIT)) * 20;
-
-  const codeAccuracy = calcCodeAccuracy(submittedCode, expectedCode);
-  const codePoints = codeAccuracy * 10;
-
-  return Math.round(accPoints + speedBonus + codePoints);
+  let score = correctCount * 5;
+  if (submittedCode && expectedCode && submittedCode !== expectedCode) {
+    score -= 5;
+  }
+  return Math.max(0, score);
 }
 
 function calcFinalScore(attempts) {
-  // attempts: array of { attemptNo, correctCount, timeUsed, pct, score, won }
   if (!attempts.length) return 0;
-  const best = Math.max(...attempts.map(a => a.score));
-  const bestAttempt = attempts.find(a => a.score === best);
-  const penalty = (bestAttempt.attemptNo - 1) * 5;
-  return Math.max(0, best - penalty);
+  return attempts[attempts.length - 1].score;
 }
 
 // ─── QUESTIONS ─────────────────────────────────────────────────────────────────
@@ -105,6 +99,42 @@ const QUESTIONS = [
     correct: 0,
     category: "Snippet",
   },
+  {
+    id: 7,
+    typeQ: "snippet",
+    code: "let a = {};\nlet b = a;\nb.name = 'XLO';\nconsole.log(a.name);",
+    text: "What is logged?",
+    options: ["undefined", "XLO", "Error", "null"],
+    correct: 1,
+    category: "Snippet",
+  },
+  {
+    id: 8,
+    typeQ: "noSnippet",
+    text: "Which data structure uses FIFO (First In, First Out) principle?",
+    image: null,
+    options: ["Stack", "Queue", "Tree", "Graph"],
+    correct: 1,
+    category: "Programming Concepts",
+  },
+  {
+    id: 9,
+    typeQ: "noSnippet",
+    text: "Which programming paradigm focuses on objects and their interactions?",
+    image: null,
+    options: ["Functional Programming", "Procedural Programming", "Object-Oriented Programming", "Logic Programming"],
+    correct: 2,
+    category: "Programming Concepts",
+  },
+  {
+    id: 10,
+    typeQ: "snippet",
+    code: "console.log([] == false);",
+    text: "What is the output?",
+    options: ["true", "false", "undefined", "Error"],
+    correct: 0,
+    category: "Snippet",
+  }
 ];
 
 // DRAM and NAND[2]=A  Compiler[2]=M  Microslop[2]=C  RAM[2]=M  Three decades[2]=R
@@ -139,23 +169,106 @@ const DEFAULT = {
   attempts: 0,
   timeLeft: TIME_LIMIT,
   attemptStart: null,   // Date.now() when current attempt started
-  chosen: Array(6).fill(null),
+  chosen: Array(10).fill(null),
   timedOut: false,
   finalCode: "",
   attemptLog: [],       // history of all attempts
 };
 
+const syncToServer = async (session) => {
+  try {
+    const teamName = localStorage.getItem("teamName") || "Unknown Team";
+    const finalScore = session.attemptLog ? calcFinalScore(session.attemptLog) : 0;
+
+    const payload = {
+      teamName: teamName,
+      finalScore: finalScore,
+      ...session,
+      timeLeft: typeof session.timeLeft === "number" ? fmtTime(session.timeLeft) : session.timeLeft,
+      attemptLog: session.attemptLog ? session.attemptLog.map(a => ({
+        ...a,
+        timeUsed: typeof a.timeUsed === "number" ? fmtTime(a.timeUsed) : a.timeUsed
+      })) : []
+    };
+
+    await fetch(`${import.meta.env.VITE_API_URL}/api/round1`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    console.log(session);
+    console.log(teamName);
+  } catch (err) {
+    console.error("Sync failed", err);
+  }
+};
+
+// function loadSess() {
+//   try {
+//     const raw = localStorage.getItem(SK);
+//     if (!raw) return { ...DEFAULT };
+//     const p = JSON.parse(raw);
+//     if (!Array.isArray(p.chosen) || p.chosen.length !== 10) p.chosen = Array(10).fill(null);
+//     if (!Array.isArray(p.attemptLog)) p.attemptLog = [];
+//     syncToServer()
+//     return { ...DEFAULT, ...p };
+//   } catch { return { ...DEFAULT }; }
+// }
+
+// function loadSess() {
+//   try {
+//     const raw = localStorage.getItem(SK);
+//     if (!raw) return { ...DEFAULT };
+
+//     const p = JSON.parse(raw);
+
+//     if (!Array.isArray(p.chosen) || p.chosen.length !== 10)
+//       p.chosen = Array(10).fill(null);
+
+//     if (!Array.isArray(p.attemptLog))
+//       p.attemptLog = [];
+
+//     const session = { ...DEFAULT, ...p };
+
+//     syncToServer(session); // ✅ send correct data
+
+//     return session;
+//   } catch {
+//     return { ...DEFAULT };
+//   }
+// }
+
 function loadSess() {
   try {
     const raw = localStorage.getItem(SK);
     if (!raw) return { ...DEFAULT };
-    const p = JSON.parse(raw);
-    if (!Array.isArray(p.chosen) || p.chosen.length !== 6) p.chosen = Array(6).fill(null);
-    if (!Array.isArray(p.attemptLog)) p.attemptLog = [];
-    return { ...DEFAULT, ...p };
-  } catch { return { ...DEFAULT }; }
+
+    let parsed = JSON.parse(raw);
+
+    // 🔥 fix double-stringified issue
+    if (typeof parsed === "string") {
+      parsed = JSON.parse(parsed);
+    }
+
+    if (!Array.isArray(parsed.chosen) || parsed.chosen.length !== 10)
+      parsed.chosen = Array(10).fill(null);
+
+    if (!Array.isArray(parsed.attemptLog))
+      parsed.attemptLog = [];
+
+    const session = { ...DEFAULT, ...parsed };
+
+    syncToServer(session);
+
+    return session;
+  } catch (err) {
+    console.error("Parse error:", err);
+    return { ...DEFAULT };
+  }
 }
-function saveSess(s) { try { localStorage.setItem(SK, JSON.stringify(s)); } catch { } }
+function saveSess(s) { try { localStorage.setItem(SK, JSON.stringify(s)); syncToServer(s); } catch { } }
 
 // ─── STYLES ────────────────────────────────────────────────────────────────────
 const STYLES = `
@@ -282,9 +395,9 @@ function ScorePanel({ attemptLog, currentEntry, compact = false }) {
   const bestEntry = allEntries.find(a => a.score === bestScore);
   const finalScore = calcFinalScore(allEntries);
 
-  const finalColor = finalScore >= 80 ? "var(--green)" : finalScore >= 55 ? "var(--amber)" : "var(--red)";
-  const grade = finalScore >= 90 ? "S" : finalScore >= 80 ? "A" : finalScore >= 65 ? "B" : finalScore >= 50 ? "C" : "D";
-  const gradeColor = finalScore >= 90 ? "var(--green)" : finalScore >= 80 ? "var(--cyan)" : finalScore >= 65 ? "var(--amber)" : finalScore >= 50 ? "var(--amber)" : "var(--red)";
+  const finalColor = finalScore >= 30 ? "var(--green)" : finalScore >= 15 ? "var(--amber)" : "var(--red)";
+  const grade = finalScore >= 40 ? "S" : finalScore >= 35 ? "A" : finalScore >= 30 ? "B" : finalScore >= 20 ? "C" : "D";
+  const gradeColor = finalScore >= 40 ? "var(--green)" : finalScore >= 40 ? "var(--cyan)" : finalScore >= 35 ? "var(--amber)" : finalScore >= 20 ? "var(--amber)" : "var(--red)";
 
   return (
     <div style={{ background: "var(--s1)", border: "1px solid var(--border2)", borderRadius: 8, padding: compact ? 16 : 22, animation: "fadeUp .4s ease" }}>
@@ -314,13 +427,8 @@ function ScorePanel({ attemptLog, currentEntry, compact = false }) {
       {/* Score formula explanation */}
       <div style={{ background: "var(--bg)", border: "1px solid var(--border2)", borderRadius: 4, padding: "10px 14px", fontSize: 10, fontFamily: "'Share Tech Mono',monospace", color: "var(--dim)", lineHeight: 1.9 }}>
         <div style={{ color: "var(--text)", marginBottom: 4, letterSpacing: 1 }}>SCORING FORMULA</div>
-        <div>Raw Score = (correct/6 × 80) + speed_bonus (up to 20)</div>
-        <div>Final Score = Best Raw Score − (5 × retries before best attempt)</div>
-        {allEntries.length > 1 && (
-          <div style={{ marginTop: 4, color: "var(--amber)" }}>
-            Retry penalty applied: −{(bestEntry.attemptNo - 1) * 5} pts ({bestEntry.attemptNo - 1} retr{bestEntry.attemptNo === 2 ? "y" : "ies"})
-          </div>
-        )}
+        <div>Raw Score = correct answers × 5</div>
+        <div>Final Score = Latest Attempt Score</div>
       </div>
     </div>
   );
@@ -343,7 +451,7 @@ function AccessGate({ attempts, attemptLog, onAuth }) {
         <span style={{ position: "absolute", inset: 0, color: "var(--red)", animation: "glitch 4s infinite", pointerEvents: "none" }} aria-hidden>CODE CRACKER</span>
       </h1>
       <p style={{ fontSize: 11, fontFamily: "'Share Tech Mono',monospace", color: "var(--dim)", letterSpacing: 3, textAlign: "center", marginBottom: 36 }}>
-        6 QUESTIONS · 30 MINUTES · {MAX_ATTEMPTS} ATTEMPTS MAX
+        10 QUESTIONS · 30 MINUTES · {MAX_ATTEMPTS} ATTEMPTS MAX
       </p>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 26, alignItems: "center" }}>
@@ -357,7 +465,7 @@ function AccessGate({ attempts, attemptLog, onAuth }) {
       <div style={{ background: "var(--s1)", border: "1px solid var(--border2)", borderRadius: 8, padding: "32px 38px", width: "100%", maxWidth: 500, position: "relative", animation: err ? "shake .5s ease" : "none" }}>
         <Corner color="var(--purple)" />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 22 }}>
-          {[["⏱", "30 MIN", "Time Limit"], ["❓", "6", "Questions"], ["🔄", MAX_ATTEMPTS, "Max Attempts"], ["🔑", "3rd CHAR", "Your Code Key"]].map(([icon, v, label]) => (
+          {[["⏱", "30 MIN", "Time Limit"], ["❓", "10", "Questions"], ["🔄", MAX_ATTEMPTS, "Max Attempts"], ["🔑", "3rd CHAR", "Your Code Key"]].map(([icon, v, label]) => (
             <div key={label} style={{ background: "var(--bg)", border: "1px solid var(--border2)", borderRadius: 5, padding: "10px 12px", textAlign: "center" }}>
               <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
               <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 13, fontWeight: 700, color: "var(--purple)", letterSpacing: 1 }}>{v}</div>
@@ -366,7 +474,7 @@ function AccessGate({ attempts, attemptLog, onAuth }) {
           ))}
         </div>
         <div style={{ background: "var(--bg)", border: "1px solid rgba(180,79,255,.2)", borderLeft: "2px solid var(--purple)", borderRadius: 4, padding: "10px 14px", marginBottom: 20, fontSize: 12, lineHeight: 1.9, color: "var(--text)", opacity: .85 }}>
-          Answer all 6 questions — <strong style={{ color: "var(--purple)" }}>no going back</strong>. After Q6, take the <strong style={{ color: "var(--amber)" }}>3rd character</strong> of each answer in order and enter the resulting 6-character code. One wrong answer = wrong code.
+          Answer all 10 questions — <strong style={{ color: "var(--purple)" }}>no going back</strong>. After Q10, take the <strong style={{ color: "var(--amber)" }}>3rd character</strong> of each answer in order and enter the resulting 10-character code. One wrong answer = wrong code.
         </div>
 
         {/* Show history if returning after a failed attempt */}
@@ -667,10 +775,10 @@ function CodeEntry({ chosen, attemptsLeft, timedOut, attemptLog, currentAttemptN
   const isLocked = locked || !!existingEntry;
 
   const feedbackMsg = (pct) => {
-    if (pct === 0) return "None of your answers were correct. Review all 6 questions carefully from scratch.";
-    if (pct < 40) return `Only ${Math.round(pct / 6)} out of 6 correct. Most answers need rethinking — go back to basics.`;
-    if (pct < 70) return `You got roughly ${Math.round(pct / 6)} out of 6 right. A few key answers still need revisiting.`;
-    if (pct < 100) return `So close! About ${Math.round(pct / 6)} out of 6 correct. Just ${6 - Math.round(pct / 6)} more to nail.`;
+    if (pct === 0) return "None of your answers were correct. Review all 10 questions carefully from scratch.";
+    if (pct < 40) return `Only ${Math.round(pct / 10)} out of 10 correct. Most answers need rethinking — go back to basics.`;
+    if (pct < 70) return `You got roughly ${Math.round(pct / 10)} out of 10 right. A few key answers still need revisiting.`;
+    if (pct < 100) return `So close! About ${Math.round(pct / 10)} out of 10 correct. Just ${10 - Math.round(pct / 10)} more to nail.`;
     return "All answers are correct — double-check you're extracting the 3rd character properly (count from 1, not 0).";
   };
 
@@ -699,7 +807,7 @@ function CodeEntry({ chosen, attemptsLeft, timedOut, attemptLog, currentAttemptN
           {timedOut ? "⏱ TIME'S UP" : "⬡ BUILD YOUR CODE"}
         </div>
         <div style={{ fontSize: 13, color: "var(--dim)", fontFamily: "'Share Tech Mono',monospace", letterSpacing: 1, lineHeight: 1.8, marginBottom: 22 }}>
-          {timedOut ? "Time expired. Here are your answers — apply the rule to build your code." : "All 6 questions answered. Here's your summary."}
+          {timedOut ? "Time expired. Here are your answers — apply the rule to build your code." : "All 10 questions answered. Here's your summary."}
         </div>
 
         <div style={{ background: "var(--bg)", border: "1px solid rgba(255,179,0,.2)", borderLeft: "2px solid var(--amber)", borderRadius: 4, padding: "12px 16px", marginBottom: 22, fontSize: 13, lineHeight: 1.9, color: "var(--text)" }}>
@@ -708,7 +816,7 @@ function CodeEntry({ chosen, attemptsLeft, timedOut, attemptLog, currentAttemptN
 
         {/* Chosen answers — no chars revealed */}
         <div style={{ marginBottom: 22 }}>
-          <div style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: 3, color: "var(--dim)", marginBottom: 12 }}>YOUR CHOSEN ANSWERS (Q1 → Q6):</div>
+          <div style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: 3, color: "var(--dim)", marginBottom: 12 }}>YOUR CHOSEN ANSWERS (Q1 → Q10):</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 8 }}>
             {chosen.map((ci, qi) => {
               const opt = (ci !== null && ci !== -1) ? QUESTIONS[qi].options[ci] : null;
@@ -728,16 +836,16 @@ function CodeEntry({ chosen, attemptsLeft, timedOut, attemptLog, currentAttemptN
 
         {/* Input row */}
         <div style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: 3, color: "var(--dim)", marginBottom: 10, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
-          <span>ENTER YOUR 6-CHARACTER CODE:</span>
+          <span>ENTER YOUR 10-CHARACTER CODE:</span>
           <span style={{ color: attemptsLeft <= 1 ? "var(--red)" : "var(--amber)" }}>{attemptsLeft} attempt{attemptsLeft !== 1 ? "s" : ""} remaining</span>
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <input
             value={code}
-            onChange={e => { if (!isLocked) setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6)); }}
+            onChange={e => { if (!isLocked) setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10)); }}
             onKeyDown={e => e.key === "Enter" && !isLocked && handleSubmit()}
-            placeholder={isLocked ? "— submitted —" : "Type your 6-char code here..."}
-            maxLength={6}
+            placeholder={isLocked ? "— submitted —" : "Type your 10-char code here..."}
+            maxLength={10}
             readOnly={isLocked}
             style={{
               flex: 1, minWidth: 160, background: "var(--bg)",
@@ -913,8 +1021,8 @@ export default function Round1() {
             const timeUsed = TIME_LIMIT - 0; // used all time
             const correct = QUESTIONS.filter((q, i) => prev.chosen[i] !== null && prev.chosen[i] !== undefined && prev.chosen[i] === q.correct).length;
             const pct = Math.round((correct / QUESTIONS.length) * 100);
-            const score = calcAttemptScore(correct, TIME_LIMIT);
             const expCode = buildExpectedCode(prev.chosen);
+            const score = calcAttemptScore(correct, TIME_LIMIT, "(timed out)", expCode);
             const entry = { attemptNo: prev.attempts + 1, correctCount: correct, pct, timeUsed: TIME_LIMIT, score, won: false, submittedCode: "(timed out)", expectedCode: expCode, ts: Date.now() };
             const next = { ...prev, timeLeft: 0, phase: "timed-out", timedOut: true, attemptLog: [...prev.attemptLog, entry] };
             saveSess(next);
@@ -955,11 +1063,11 @@ export default function Round1() {
     const timeUsed = attemptStart ? Math.round((Date.now() - attemptStart) / 1000) : TIME_LIMIT - timeLeft;
     const expectedCode = buildExpectedCode(chosen); // what code SHOULD be from their answers
     if (correct) {
-      const score = calcAttemptScore(QUESTIONS.length, timeUsed);
+      const score = calcAttemptScore(QUESTIONS.length, timeUsed, submittedCode, expectedCode);
       const entry = { attemptNo: attempts + 1, correctCount: QUESTIONS.length, pct: 100, timeUsed, score, won: true, submittedCode, expectedCode, ts: Date.now() };
       update({ phase: "win", finalCode: submittedCode, attempts: attempts + 1, attemptLog: [...attemptLog, entry] });
     } else {
-      const score = calcAttemptScore(correctCount || 0, timeUsed);
+      const score = calcAttemptScore(correctCount || 0, timeUsed, submittedCode, expectedCode);
       const entry = { attemptNo: attempts + 1, correctCount: correctCount || 0, pct: pct || 0, timeUsed, score, won: false, submittedCode, expectedCode, ts: Date.now() };
       const newAttempts = attempts + 1;
       const nextPhase = newAttempts >= MAX_ATTEMPTS ? "locked" : "code-entry";
@@ -970,7 +1078,7 @@ export default function Round1() {
   const handleRestart = () => {
     if (attempts >= MAX_ATTEMPTS) { update({ phase: "locked" }); return; }
     // Keep timer running — only reset answers and record new attemptStart
-    update({ phase: "quiz", chosen: Array(6).fill(null), attemptStart: Date.now() });
+    update({ phase: "quiz", chosen: Array(10).fill(null), attemptStart: Date.now() });
   };
 
   return (

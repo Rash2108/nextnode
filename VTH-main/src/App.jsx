@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import Round3 from "./components/Round3";
+import Round2 from "./components/Round2";
 import ShadowTrace from "./components/ShadowTrace";
 import HiddenMessage from "./components/HiddenMessage";
 import Round1 from "./components/Round1";
@@ -14,7 +14,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/register" replace />} />
         <Route path="/register" element={<RegisterTeam />} />
         <Route path="/round1" element={<Round1 />} />
-        <Route path="/round3" element={<Round3 />} />
+        <Route path="/round2" element={<Round2 />} />
         <Route path="/shadow-trace" element={<ShadowTrace />} />
         <Route path="/hidden-message" element={<HiddenMessage />} />
         <Route path="/treasure-hunt-2" element={<TreasureHunt2 />} />

@@ -54,9 +54,12 @@ const RegisterTeam = () => {
                 alert(data.message);
                 return;
             }
-
+            localStorage.setItem("teamName", formData.teamName);
             // ✅ Redirect after success
-            navigate("/round1");
+            // navigate("/round1");
+            navigate("/round1", {
+                state: { teamName: formData.teamName }
+            });
 
         } catch (err) {
             console.error(err);

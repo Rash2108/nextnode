@@ -838,7 +838,7 @@ function CenterCell({ allSolved, onFinalSubmit, isSolved }) {
 }
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
-export default function Round3() {
+export default function Round2() {
   const [layout] = useState(() => shuffleArray(HINTS));
   const [solved, setSolved] = useState({});
   const [finalSolved, setFinalSolved] = useState(false);
