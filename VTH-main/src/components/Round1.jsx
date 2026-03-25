@@ -395,9 +395,9 @@ function ScorePanel({ attemptLog, currentEntry, compact = false }) {
   const bestEntry = allEntries.find(a => a.score === bestScore);
   const finalScore = calcFinalScore(allEntries);
 
-  const finalColor = finalScore >= 30 ? "var(--green)" : finalScore >= 15 ? "var(--amber)" : "var(--red)";
-  const grade = finalScore >= 40 ? "S" : finalScore >= 35 ? "A" : finalScore >= 30 ? "B" : finalScore >= 20 ? "C" : "D";
-  const gradeColor = finalScore >= 40 ? "var(--green)" : finalScore >= 40 ? "var(--cyan)" : finalScore >= 35 ? "var(--amber)" : finalScore >= 20 ? "var(--amber)" : "var(--red)";
+  const finalColor = finalScore >= 40 ? "var(--green)" : finalScore >= 25 ? "var(--amber)" : "var(--red)";
+  const grade = finalScore >= 45 ? "S" : finalScore >= 40 ? "A" : finalScore >= 30 ? "B" : finalScore >= 20 ? "C" : "D";
+  const gradeColor = finalScore >= 45 ? "var(--green)" : finalScore >= 40 ? "var(--cyan)" : finalScore >= 20 ? "var(--amber)" : "var(--red)";
 
   return (
     <div style={{ background: "var(--s1)", border: "1px solid var(--border2)", borderRadius: 8, padding: compact ? 16 : 22, animation: "fadeUp .4s ease" }}>
@@ -424,12 +424,7 @@ function ScorePanel({ attemptLog, currentEntry, compact = false }) {
 
       {/* Per-attempt code comparison (only for non-win entries that have submittedCode) */}
 
-      {/* Score formula explanation */}
-      <div style={{ background: "var(--bg)", border: "1px solid var(--border2)", borderRadius: 4, padding: "10px 14px", fontSize: 10, fontFamily: "'Share Tech Mono',monospace", color: "var(--dim)", lineHeight: 1.9 }}>
-        <div style={{ color: "var(--text)", marginBottom: 4, letterSpacing: 1 }}>SCORING FORMULA</div>
-        <div>Raw Score = correct answers × 5</div>
-        <div>Final Score = Latest Attempt Score</div>
-      </div>
+
     </div>
   );
 }
@@ -487,7 +482,7 @@ function AccessGate({ attempts, attemptLog, onAuth }) {
         )}
 
         <p style={{ fontSize: 10, fontFamily: "'Share Tech Mono',monospace", letterSpacing: 3, color: "var(--dim)", marginBottom: 10 }}>// ENTER TEAM NAME</p>
-        <input value={team} onChange={e => {setTeam(e.target.value); setErr(false);}} onKeyDown={e => e.key === "Enter" && go()}
+        <input value={team} onChange={e => { setTeam(e.target.value); setErr(false); }} onKeyDown={e => e.key === "Enter" && go()}
           placeholder="Team Name..." autoComplete="off" spellCheck={false}
           style={{ width: "100%", background: "var(--bg)", border: `1px solid ${err ? "var(--red)" : "var(--border2)"}`, borderRadius: 4, padding: "13px 16px", color: "var(--purple)", fontFamily: "'Share Tech Mono',monospace", fontSize: 14, letterSpacing: 2, outline: "none", marginBottom: 20, transition: "border-color .2s" }}
         />
@@ -948,12 +943,12 @@ function WinScreen({ code, attemptLog }) {
     const final = calcFinalScore(attemptLog);
     console.clear();
     console.log("%c🏆 CODE CRACKER — CLEARED", "color:#b44fff;font-size:18px;font-weight:bold;");
-    console.log(`%cFinal Score: ${final}/100`, "color:#ffb300;font-size:14px;");
-    console.log(`%cFinal Vault Token: ${NEXT_TOKEN}`, "color:#fff;background:#060c18;font-size:18px;font-weight:bold;padding:8px 20px;border-left:4px solid #b44fff;display:block;margin-top:6px;");
+    console.log(`%cFinal Score: ${final}/50`, "color:#ffb300;font-size:14px;");
+    console.log(`%cPROCEED TO ROUND 2`, "color:#fff;background:#060c18;font-size:18px;font-weight:bold;padding:8px 20px;border-left:4px solid #b44fff;display:block;margin-top:6px;");
   }, []);
 
   const finalScore = calcFinalScore(attemptLog);
-  const finalColor = finalScore >= 80 ? "var(--green)" : finalScore >= 55 ? "var(--amber)" : "var(--red)";
+  const finalColor = finalScore >= 40 ? "var(--green)" : finalScore >= 25 ? "var(--amber)" : "var(--red)";
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center", animation: "fadeUp .6s ease" }}>
@@ -974,11 +969,11 @@ function WinScreen({ code, attemptLog }) {
       <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 22, flexWrap: "wrap", justifyContent: "center" }}>
         <div style={{ background: "var(--s1)", border: `1px solid ${finalColor}`, borderRadius: 8, padding: "14px 24px", textAlign: "center" }}>
           <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 36, fontWeight: 900, color: finalColor, textShadow: `0 0 20px ${finalColor}`, lineHeight: 1 }}>{finalScore}</div>
-          <div style={{ fontSize: 9, color: "var(--dim)", letterSpacing: 3, marginTop: 4 }}>FINAL SCORE / 100</div>
+          <div style={{ fontSize: 9, color: "var(--dim)", letterSpacing: 3, marginTop: 4 }}>FINAL SCORE / 50</div>
         </div>
         <div style={{ background: "var(--s1)", border: "1px solid var(--purple)", borderRadius: 8, padding: "14px 24px", animation: "successGlow 2s ease infinite" }}>
-          <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 14, color: "var(--purple)", letterSpacing: 3 }}>FINAL VAULT TOKEN</div>
-          <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 16, fontWeight: 700, color: "#fff", letterSpacing: 2, marginTop: 6 }}>{NEXT_TOKEN}</div>
+          <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 14, color: "var(--purple)", letterSpacing: 3 }}>PHASE CLEARED</div>
+          <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 14, fontWeight: 700, color: "#fff", letterSpacing: 2, marginTop: 6 }}>PROCEED TO ROUND 2</div>
         </div>
       </div>
 
@@ -987,7 +982,7 @@ function WinScreen({ code, attemptLog }) {
         <ScorePanel attemptLog={attemptLog} />
       </div>
       <div style={{ fontSize: 11, fontFamily: "'Share Tech Mono',monospace", color: "var(--cyan)", letterSpacing: 2 }}>
-        ▶ Token &amp; score also stored in Console &amp; localStorage
+        ▶ Score securely stored in Console &amp; localStorage
       </div>
     </div>
   );
