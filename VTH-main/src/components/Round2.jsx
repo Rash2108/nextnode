@@ -1018,20 +1018,38 @@ export default function Round2() {
       score: sess.score + 10
     }, true);
 
+    const teamName = localStorage.getItem("teamName") || "Unknown Team";
+    const totalTimeUsed = TIME_LIMIT - sess.timeLeft;
+    const finalScore = sess.score + 10;
+    const timeFmt = fmtTime(totalTimeUsed);
+
     console.clear();
-    console.log("%c╔══════════════════════════════════════════╗", `color:${gold};font-size:14px;`);
-    console.log("%c║   🏆  GFG TREASURE UNLOCKED  🏆          ║", `color:${gold};font-size:14px;font-weight:bold;`);
-    console.log("%c╚══════════════════════════════════════════╝", `color:${gold};font-size:14px;`);
-    console.log("%c\nYour Secret Flag:", "color:#00ff9f;font-size:13px;");
-    console.log(`%c${SECRET_FLAG}`,
-      "color:#fff;background:#060c18;font-size:20px;font-weight:bold;padding:8px 20px;border-left:4px solid #e8a838;letter-spacing:2px;display:block;margin-top:4px;");
-    console.log("%c\n📦 Also stored in localStorage — key: 'treasure_flag'", "color:#3a5070;font-size:11px;");
-    console.log("%c🌐 Also visible in the Network tab (check XHR/Fetch)", "color:#3a5070;font-size:11px;");
-    console.log("%c🔑 Also available at: window.__flag__", "color:#3a5070;font-size:11px;");
-    localStorage.setItem("treasure_flag", SECRET_FLAG);
-    localStorage.setItem("hint", "You found it via localStorage! The flag is the treasure_flag key.");
-    fetch(`https://httpbin.org/get?flag=${encodeURIComponent(SECRET_FLAG)}&event=gfg_treasure_hunt`).catch(() => { });
-    window.__flag__ = { value: SECRET_FLAG, msg: "You cracked the GFG NextNode. Well done." };
+    console.log(
+      "%c╔══════════════════════════════════════════════╗\n" +
+      "║   🏆  CONGRATULATIONS! VAULT UNLOCKED  🏆    ║\n" +
+      "╚══════════════════════════════════════════════╝",
+      `color:${gold};font-size:14px;font-weight:bold;`
+    );
+    console.log(
+      `%cWell done, ${teamName}! You cracked the NextNode vault.`,
+      "color:#00ff9f;font-size:13px;font-weight:bold;margin-top:8px;"
+    );
+    console.log(
+      `%c⏱  Overall Time Used : ${timeFmt}`,
+      "color:#e0eeff;font-size:13px;padding:4px 0;"
+    );
+    console.log(
+      `%c🏅  Final Score       : ${finalScore} / 50`,
+      `color:${gold};font-size:13px;font-weight:bold;padding:4px 0;`
+    );
+    console.log(
+      "%c──────────────────────────────────────────────",
+      "color:#1a2535;font-size:12px;"
+    );
+    console.log(
+      "%c🎉 You've completed Round 2 of the Virtual Treasure Hunt!",
+      "color:#b8cce0;font-size:11px;"
+    );
   };
 
   const gridCells = [];
