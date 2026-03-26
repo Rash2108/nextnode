@@ -97,7 +97,7 @@ function AccessGate({ onAuth }) {
       <div style={{ background: "#0a1018", border: "1px solid #1a2535", borderRadius: 8, padding: "32px 38px", width: "100%", maxWidth: 500, position: "relative" }}>
         <Corner color={gold} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 22 }}>
-          {[["⏱", "30 MIN", "Time Limit"], ["❓", "9", "Puzzles"], ["🏆", "50", "Max Points"], ["🔑", "1st CHAR", "Master Key"]].map(([icon, v, label]) => (
+          {[["⏱", "30 MIN", "Time Limit"], ["❓", "9", "Puzzles"], ["🏆", "25", "Max Points"], ["🔑", "1st CHAR", "Master Key"]].map(([icon, v, label]) => (
             <div key={label} style={{ background: "#040608", border: "1px solid #1a2535", borderRadius: 5, padding: "10px 12px", textAlign: "center" }}>
               <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
               <div style={{ fontFamily: "'Orbitron', monospace", fontSize: 13, fontWeight: 700, color: gold, letterSpacing: 1 }}>{v}</div>
@@ -106,7 +106,7 @@ function AccessGate({ onAuth }) {
           ))}
         </div>
         <div style={{ background: "#040608", border: `1px solid ${gold}33`, borderLeft: `2px solid ${gold}`, borderRadius: 4, padding: "10px 14px", marginBottom: 20, fontSize: 12, lineHeight: 1.9, color: "#e0eeff", opacity: .85 }}>
-          Solve 8 hints to gather clues. Then use the <strong style={{ color: gold }}>first character</strong> of each answer to unlock the Final Vault. Each hint gives 5 points, and the final vault gives 10 points. Time matters!
+          Solve 8 hints to gather clues. Then use the <strong style={{ color: gold }}>first character</strong> of each answer to unlock the Final Vault. Each hint gives 2.5 points, and the final vault gives 5 points. Time matters!
         </div>
 
         <p style={{ fontSize: 10, letterSpacing: 3, color: "#3a5070", marginBottom: 10 }}>// ENTER TEAM NAME</p>
@@ -868,16 +868,8 @@ function CenterCell({ allSolved, onFinalSubmit, isSolved }) {
           <div style={{ fontFamily: "'Orbitron', monospace", fontSize: 16, fontWeight: 900, letterSpacing: 4, color: gold, textShadow: `0 0 20px ${gold}` }}>
             VAULT OPEN
           </div>
-          <div style={{ fontSize: 11, color: "#b8cce0aa", lineHeight: 1.7 }}>
-            Your flag is waiting in the<br />browser DevTools Console
-          </div>
-          <div style={{
-            fontSize: 12, color: "#00ff9f",
-            padding: "7px 16px", border: "1px solid #00ff9f33",
-            borderRadius: 4, background: "#00ff9f0a", letterSpacing: 1,
-          }}>
-            <span style={{ animation: "blink 1s step-end infinite", display: "inline-block", marginRight: 6 }}>▶</span>
-            Press F12 → Console
+          <div style={{ fontSize: 13, color: "#e8a838", fontWeight: 700, letterSpacing: 2, lineHeight: 1.7, marginTop: 4 }}>
+            MARKS WILL BE ANNOUNCED SHORTLY
           </div>
         </>
       ) : allSolved ? (
@@ -1002,7 +994,7 @@ export default function Round2() {
     update({
       solved: { ...sess.solved, [id]: answer },
       solvedQuestions: [...sess.solvedQuestions, { id, timeUsed: timeUsedForThisQuestion }],
-      score: sess.score + 5
+      score: sess.score + 2.5
     }, true);
   };
 
@@ -1015,12 +1007,12 @@ export default function Round2() {
       finalSolved: true,
       phase: "win",
       solvedQuestions: [...sess.solvedQuestions, { id: "FINAL_VAULT", timeUsed: timeUsedForThisQuestion }],
-      score: sess.score + 10
+      score: sess.score + 5
     }, true);
 
     const teamName = localStorage.getItem("teamName") || "Unknown Team";
     const totalTimeUsed = TIME_LIMIT - sess.timeLeft;
-    const finalScore = sess.score + 10;
+    const finalScore = sess.score + 5;
     const timeFmt = fmtTime(totalTimeUsed);
 
     console.clear();
@@ -1039,7 +1031,7 @@ export default function Round2() {
       "color:#e0eeff;font-size:13px;padding:4px 0;"
     );
     console.log(
-      `%c🏅  Final Score       : ${finalScore} / 50`,
+      `%c🏅  Final Score       : ${finalScore} / 25`,
       `color:${gold};font-size:13px;font-weight:bold;padding:4px 0;`
     );
     console.log(
@@ -1068,7 +1060,7 @@ export default function Round2() {
       <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#ff4f4f", fontFamily: "'Orbitron', monospace", background: "#040608" }}>
         <h1>TIME IS UP</h1>
         <p style={{ marginTop: 20, color: "#b8cce0", fontFamily: "'JetBrains Mono', monospace" }}>Your progress has been saved.</p>
-        <p style={{ marginTop: 10, color: "#e8a838", fontFamily: "'JetBrains Mono', monospace" }}>Final Score: {sess.score} / 50</p>
+        <p style={{ marginTop: 10, color: "#e8a838", fontFamily: "'JetBrains Mono', monospace" }}>Marks will be announced shortly.</p>
       </div>
     );
   }

@@ -31,11 +31,11 @@ const SK = "cc_session_v3";
 // }
 
 function calcAttemptScore(correctCount, timeUsed, submittedCode, expectedCode) {
-  let score = correctCount * 5;
+  let score = correctCount * 2.5;
   if (submittedCode && expectedCode && submittedCode !== expectedCode) {
-    score -= 5;
+    score -= 2.5;
   }
-  return Math.max(0, score);
+  return Math.max(0, Math.round(score * 10) / 10);
 }
 
 function calcFinalScore(attempts) {
@@ -335,7 +335,7 @@ function AttemptRow({ entry, isBest }) {
   const accColor = entry.pct >= 70 ? "var(--green)" : entry.pct >= 40 ? "var(--amber)" : "var(--red)";
   return (
     <div style={{
-      display: "grid", gridTemplateColumns: "60px 1fr 90px 80px 80px",
+      display: "grid", gridTemplateColumns: "60px 1fr 90px 80px",
       gap: 10, alignItems: "center",
       background: isBest ? "rgba(0,255,159,.04)" : "var(--bg)",
       border: `1px solid ${isBest ? "var(--green)" : "var(--border2)"}`,
@@ -357,11 +357,7 @@ function AttemptRow({ entry, isBest }) {
         <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 12, fontWeight: 700, color: "var(--cyan)" }}>{fmtTime(entry.timeUsed)}</div>
         <div style={{ fontSize: 9, color: "var(--dim)", letterSpacing: 1 }}>TIME USED</div>
       </div>
-      {/* Attempt score */}
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 15, fontWeight: 900, color: "var(--amber)", textShadow: "0 0 10px var(--amber)" }}>{entry.score}</div>
-        <div style={{ fontSize: 9, color: "var(--dim)", letterSpacing: 1 }}>RAW SCORE</div>
-      </div>
+
       {/* Won / typo / miss badge */}
       <div style={{ textAlign: "center" }}>
         {entry.won
@@ -408,10 +404,8 @@ function ScorePanel({ attemptLog, currentEntry, compact = false }) {
           <div style={{ fontFamily: "'Orbitron',monospace", fontSize: compact ? 13 : 15, fontWeight: 900, color: "var(--amber)", letterSpacing: 3 }}>ATTEMPT HISTORY</div>
         </div>
         {/* Final score badge */}
-        <div style={{ textAlign: "center", background: "var(--bg)", border: `1px solid ${finalColor}`, borderRadius: 8, padding: "10px 18px", minWidth: 90 }}>
-          <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 28, fontWeight: 900, color: finalColor, textShadow: `0 0 18px ${finalColor}`, lineHeight: 1 }}>{finalScore}</div>
-          <div style={{ fontSize: 9, color: "var(--dim)", letterSpacing: 2, marginTop: 4 }}>FINAL SCORE</div>
-          <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 16, fontWeight: 900, color: gradeColor, marginTop: 4 }}>GRADE {grade}</div>
+        <div style={{ textAlign: "center", background: "var(--bg)", border: "1px solid var(--amber)", borderRadius: 8, padding: "10px 18px", minWidth: 90 }}>
+          <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 9, fontWeight: 700, color: "var(--amber)", letterSpacing: 1, lineHeight: 1.6 }}>MARKS WILL BE<br/>ANNOUNCED SHORTLY</div>
         </div>
       </div>
 
@@ -943,7 +937,7 @@ function WinScreen({ code, attemptLog }) {
     const final = calcFinalScore(attemptLog);
     console.clear();
     console.log("%c🏆 CODE CRACKER — CLEARED", "color:#b44fff;font-size:18px;font-weight:bold;");
-    console.log(`%cFinal Score: ${final}/50`, "color:#ffb300;font-size:14px;");
+    console.log(`%cFinal Score: ${final}/25`, "color:#ffb300;font-size:14px;");
     console.log(`%cPROCEED TO ROUND 2`, "color:#fff;background:#060c18;font-size:18px;font-weight:bold;padding:8px 20px;border-left:4px solid #b44fff;display:block;margin-top:6px;");
   }, []);
 
@@ -967,9 +961,9 @@ function WinScreen({ code, attemptLog }) {
 
       {/* Final score highlight */}
       <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 22, flexWrap: "wrap", justifyContent: "center" }}>
-        <div style={{ background: "var(--s1)", border: `1px solid ${finalColor}`, borderRadius: 8, padding: "14px 24px", textAlign: "center" }}>
-          <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 36, fontWeight: 900, color: finalColor, textShadow: `0 0 20px ${finalColor}`, lineHeight: 1 }}>{finalScore}</div>
-          <div style={{ fontSize: 9, color: "var(--dim)", letterSpacing: 3, marginTop: 4 }}>FINAL SCORE / 50</div>
+        <div style={{ background: "var(--s1)", border: "1px solid var(--amber)", borderRadius: 8, padding: "14px 24px", textAlign: "center" }}>
+          <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 13, fontWeight: 700, color: "var(--amber)", letterSpacing: 2, lineHeight: 1.5 }}>MARKS WILL BE</div>
+          <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 13, fontWeight: 700, color: "var(--amber)", letterSpacing: 2 }}>ANNOUNCED SHORTLY</div>
         </div>
         <div style={{ background: "var(--s1)", border: "1px solid var(--purple)", borderRadius: 8, padding: "14px 24px", animation: "successGlow 2s ease infinite" }}>
           <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 14, color: "var(--purple)", letterSpacing: 3 }}>PHASE CLEARED</div>
