@@ -21,7 +21,7 @@ function fmtTime(s) {
 
 const syncToServer = async (session) => {
   try {
-    const teamName = localStorage.getItem("teamName") || "Unknown Team";
+    const teamName = localStorage.getItem("r2_teamName") || "Unknown Team";
     const overallUsed = TIME_LIMIT - session.timeLeft;
 
     const payload = {
@@ -76,12 +76,12 @@ function Corner({ color = "#e8a838" }) {
 }
 
 function AccessGate({ onAuth }) {
-  const [team, setTeam] = useState(() => localStorage.getItem("teamName") || "");
+  const [team, setTeam] = useState(() => localStorage.getItem("r2_teamName") || "");
   const [err, setErr] = useState(false);
 
   const go = () => {
     if (!team.trim()) { setErr(true); return; }
-    localStorage.setItem("teamName", team.trim());
+    localStorage.setItem("r2_teamName", team.trim());
     onAuth();
   };
 
@@ -1010,7 +1010,7 @@ export default function Round2() {
       score: sess.score + 5
     }, true);
 
-    const teamName = localStorage.getItem("teamName") || "Unknown Team";
+    const teamName = localStorage.getItem("r2_teamName") || "Unknown Team";
     const totalTimeUsed = TIME_LIMIT - sess.timeLeft;
     const finalScore = sess.score + 5;
     const timeFmt = fmtTime(totalTimeUsed);
