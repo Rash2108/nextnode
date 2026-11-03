@@ -6,9 +6,10 @@ const router = express.Router();
 // Register team
 router.post("/register", async (req, res) => {
   try {
-    const { teamName, players } = req.body;
+    const { players } = req.body;
+    const teamName = typeof req.body.teamName === "string" ? req.body.teamName.trim() : "";
 
-    if (!teamName || players.length !== 2) {
+    if (!teamName || !Array.isArray(players) || players.length !== 2) {
       return res.status(400).json({ message: "Invalid data" });
     }
 
@@ -17,7 +18,7 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Team already exists" });
     }
 
-    const newTeam = new Team(req.body);
+    const newTeam = new Team({ ...req.body, teamName });
     await newTeam.save();
 
     res.status(201).json({ message: "Team registered successfully" });

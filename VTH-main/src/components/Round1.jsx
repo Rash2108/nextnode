@@ -1,4 +1,12 @@
 import { useState, useEffect, useRef, Fragment } from "react";
+import {
+  ROUND1_BASE_KEY,
+  getActiveTeam,
+  setActiveTeam,
+  loadTeamSession,
+  saveTeamSession,
+  normalizeTeamName,
+} from "../utils/teamSession";
 import { useLocation } from "react-router-dom";
 
 
@@ -8,7 +16,7 @@ const VALID_TOKENS = ["LEE", "VAULT_OMEGA_PRIME", "CTF{g33ks_hunt3r_m4st3r_2024}
 const NEXT_TOKEN = "FINAL_VAULT_X9";
 const MAX_ATTEMPTS = 3;
 const TIME_LIMIT = 30 * 60;
-const SK = "cc_session_v3";
+const SK = ROUND1_BASE_KEY;
 
 // ─── SCORE FORMULA ─────────────────────────────────────────────────────────────
 // Score per attempt  = accuracy_points + speed_bonus
@@ -175,15 +183,17 @@ const DEFAULT = {
   attemptLog: [],       // history of all attempts
 };
 
-const syncToServer = async (session) => {
+const syncToServer = async (session, teamName = getActiveTeam()) => {
   try {
-    const teamName = localStorage.getItem("teamName") || "Unknown Team";
+    const team = normalizeTeamName(teamName);
+    if (!team) return;
+
     const finalScore = session.attemptLog ? calcFinalScore(session.attemptLog) : 0;
 
     const payload = {
-      teamName: teamName,
-      finalScore: finalScore,
       ...session,
+      teamName: team,
+      finalScore: finalScore,
       timeLeft: typeof session.timeLeft === "number" ? fmtTime(session.timeLeft) : session.timeLeft,
       attemptLog: session.attemptLog ? session.attemptLog.map(a => ({
         ...a,
@@ -199,7 +209,7 @@ const syncToServer = async (session) => {
       body: JSON.stringify(payload),
     });
     console.log(session);
-    console.log(teamName);
+    console.log(team);
   } catch (err) {
     console.error("Sync failed", err);
   }
@@ -240,35 +250,21 @@ const syncToServer = async (session) => {
 //   }
 // }
 
-function loadSess() {
-  try {
-    const raw = localStorage.getItem(SK);
-    if (!raw) return { ...DEFAULT };
+function loadSess(teamName = getActiveTeam()) {
+  const session = loadTeamSession(SK, teamName, DEFAULT);
 
-    let parsed = JSON.parse(raw);
+  if (!Array.isArray(session.chosen) || session.chosen.length !== 10)
+    session.chosen = Array(10).fill(null);
 
-    // 🔥 fix double-stringified issue
-    if (typeof parsed === "string") {
-      parsed = JSON.parse(parsed);
-    }
+  if (!Array.isArray(session.attemptLog))
+    session.attemptLog = [];
 
-    if (!Array.isArray(parsed.chosen) || parsed.chosen.length !== 10)
-      parsed.chosen = Array(10).fill(null);
-
-    if (!Array.isArray(parsed.attemptLog))
-      parsed.attemptLog = [];
-
-    const session = { ...DEFAULT, ...parsed };
-
-    syncToServer(session);
-
-    return session;
-  } catch (err) {
-    console.error("Parse error:", err);
-    return { ...DEFAULT };
-  }
+  return session;
 }
-function saveSess(s) { try { localStorage.setItem(SK, JSON.stringify(s)); } catch { } }
+
+function saveSess(s, teamName = getActiveTeam()) {
+  saveTeamSession(SK, teamName, s);
+}
 
 // ─── STYLES ────────────────────────────────────────────────────────────────────
 const STYLES = `
@@ -425,13 +421,13 @@ function ScorePanel({ attemptLog, currentEntry, compact = false }) {
 
 // ─── ACCESS GATE ───────────────────────────────────────────────────────────────
 function AccessGate({ attempts, attemptLog, onAuth }) {
-  const [team, setTeam] = useState(() => localStorage.getItem("teamName") || "");
+  const [team, setTeam] = useState(() => getActiveTeam());
   const [err, setErr] = useState(false);
 
   const go = () => {
-    if (!team.trim()) { setErr(true); return; }
-    localStorage.setItem("teamName", team.trim());
-    onAuth();
+    const teamName = team.trim();
+    if (!teamName) { setErr(true); return; }
+    onAuth(teamName);
   };
 
   return (
@@ -990,10 +986,11 @@ export default function Round1() {
   const { phase, authed, attempts, timeLeft, chosen, timedOut, finalCode, attemptStart, attemptLog } = sess;
 
   const update = (patch, doSync = false) => {
+    const teamName = getActiveTeam();
     setSess(prev => {
       const next = { ...prev, ...patch };
-      saveSess(next);
-      if (doSync) syncToServer(next);
+      saveSess(next, teamName);
+      if (doSync) syncToServer(next, teamName);
       return next;
     });
   };
@@ -1001,6 +998,7 @@ export default function Round1() {
   // ── Timer — ticks only during quiz ───────────────────────────────────────
   const timerRef = useRef(null);
   useEffect(() => {
+    const teamName = getActiveTeam();
     if (phase === "quiz") {
       timerRef.current = setInterval(() => {
         setSess(prev => {
@@ -1016,12 +1014,12 @@ export default function Round1() {
             const score = calcAttemptScore(correct, TIME_LIMIT, "(timed out)", expCode);
             const entry = { attemptNo: prev.attempts + 1, correctCount: correct, pct, timeUsed: TIME_LIMIT, score, won: false, submittedCode: "(timed out)", expectedCode: expCode, ts: Date.now() };
             const next = { ...prev, timeLeft: 0, phase: "timed-out", timedOut: true, attemptLog: [...prev.attemptLog, entry] };
-            saveSess(next);
-            syncToServer(next);
+            saveSess(next, teamName);
+            syncToServer(next, teamName);
             return next;
           }
           const next = { ...prev, timeLeft: t };
-          saveSess(next);
+          saveSess(next, teamName);
           return next;
         });
       }, 1000);
@@ -1032,9 +1030,27 @@ export default function Round1() {
   }, [phase]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
-  const handleAuth = () => {
-    if (attempts >= MAX_ATTEMPTS) { update({ phase: "locked" }, true); return; }
-    update({ phase: "quiz", authed: true, attemptStart: Date.now() }, true);
+  const handleAuth = (teamName) => {
+    const team = setActiveTeam(teamName);
+    const session = loadSess(team);
+
+    if (session.phase !== "gate") {
+      setSess(session);
+      return;
+    }
+
+    if (session.attempts >= MAX_ATTEMPTS) {
+      const next = { ...session, phase: "locked" };
+      setSess(next);
+      saveSess(next, team);
+      syncToServer(next, team);
+      return;
+    }
+
+    const next = { ...session, phase: "quiz", authed: true, attemptStart: Date.now() };
+    setSess(next);
+    saveSess(next, team);
+    syncToServer(next, team);
   };
 
   const handleAnswer = (qIdx, optIdx) => {

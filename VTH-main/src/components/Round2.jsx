@@ -1,7 +1,15 @@
 import { useState, useEffect, useRef } from "react";
+import {
+  ROUND2_BASE_KEY,
+  getActiveTeam,
+  setActiveTeam,
+  loadTeamSession,
+  saveTeamSession,
+  normalizeTeamName,
+} from "../utils/teamSession";
 
 // ─── STATE & SYNC ──────────────────────────────────────────────────────────────
-const SK = "cc_round2_session";
+const SK = ROUND2_BASE_KEY;
 const TIME_LIMIT = 30 * 60; // 30 minutes
 
 const DEFAULT_SESSION = {
@@ -19,14 +27,16 @@ function fmtTime(s) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
-const syncToServer = async (session) => {
+const syncToServer = async (session, teamName = getActiveTeam()) => {
   try {
-    const teamName = localStorage.getItem("r2_teamName") || "Unknown Team";
+    const team = normalizeTeamName(teamName);
+    if (!team) return;
+
     const overallUsed = TIME_LIMIT - session.timeLeft;
 
     const payload = {
-      teamName,
       ...session,
+      teamName: team,
       timeLeft: typeof session.timeLeft === "number" ? fmtTime(session.timeLeft) : session.timeLeft,
       overallTimeUsed: fmtTime(overallUsed),
       solvedQuestions: session.solvedQuestions ? session.solvedQuestions.map(q => ({
@@ -45,24 +55,12 @@ const syncToServer = async (session) => {
   }
 };
 
-function loadSess() {
-  try {
-    const raw = localStorage.getItem(SK);
-    if (!raw) return { ...DEFAULT_SESSION };
-    let parsed = JSON.parse(raw);
-    if (typeof parsed === "string") parsed = JSON.parse(parsed);
-    const session = { ...DEFAULT_SESSION, ...parsed };
-    syncToServer(session);
-    return session;
-  } catch {
-    return { ...DEFAULT_SESSION };
-  }
+function loadSess(teamName = getActiveTeam()) {
+  return loadTeamSession(SK, teamName, DEFAULT_SESSION);
 }
 
-function saveSess(s) {
-  try {
-    localStorage.setItem(SK, JSON.stringify(s));
-  } catch { }
+function saveSess(s, teamName = getActiveTeam()) {
+  saveTeamSession(SK, teamName, s);
 }
 
 function Corner({ color = "#e8a838" }) {
@@ -76,13 +74,13 @@ function Corner({ color = "#e8a838" }) {
 }
 
 function AccessGate({ onAuth }) {
-  const [team, setTeam] = useState(() => localStorage.getItem("r2_teamName") || "");
+  const [team, setTeam] = useState(() => getActiveTeam());
   const [err, setErr] = useState(false);
 
   const go = () => {
-    if (!team.trim()) { setErr(true); return; }
-    localStorage.setItem("r2_teamName", team.trim());
-    onAuth();
+    const teamName = team.trim();
+    if (!teamName) { setErr(true); return; }
+    onAuth(teamName);
   };
 
   const gold = "#e8a838";
@@ -944,10 +942,11 @@ export default function Round2() {
   const [layout] = useState(() => shuffleArray(HINTS));
 
   const update = (obj, doSync = false) => {
+    const teamName = getActiveTeam();
     setSess(prev => {
       const next = { ...prev, ...obj };
-      saveSess(next);
-      if (doSync) syncToServer(next);
+      saveSess(next, teamName);
+      if (doSync) syncToServer(next, teamName);
       return next;
     });
   };
@@ -958,6 +957,7 @@ export default function Round2() {
 
   const timerRef = useRef(null);
   useEffect(() => {
+    const teamName = getActiveTeam();
     if (sess.phase === "quiz") {
       timerRef.current = setInterval(() => {
         setSess(prev => {
@@ -966,12 +966,12 @@ export default function Round2() {
           if (t <= 0) {
             clearInterval(timerRef.current);
             const next = { ...prev, timeLeft: 0, phase: "timed-out" };
-            saveSess(next);
-            syncToServer(next);
+            saveSess(next, teamName);
+            syncToServer(next, teamName);
             return next;
           }
           const next = { ...prev, timeLeft: t };
-          saveSess(next);
+          saveSess(next, teamName);
           return next;
         });
       }, 1000);
@@ -981,8 +981,20 @@ export default function Round2() {
     return () => clearInterval(timerRef.current);
   }, [sess.phase]);
 
-  const handleAuth = () => {
-    update({ phase: "quiz", attemptStart: Date.now() }, true);
+  const handleAuth = (teamName) => {
+    const team = setActiveTeam(teamName);
+    const session = loadSess(team);
+
+    if (session.phase !== "gate") {
+      setSess(session);
+      return;
+    }
+
+    const next = { ...session, phase: "quiz", attemptStart: Date.now() };
+
+    setSess(next);
+    saveSess(next, team);
+    syncToServer(next, team);
   };
 
   const handleHintSolve = (id, answer) => {
@@ -1010,7 +1022,7 @@ export default function Round2() {
       score: sess.score + 5
     }, true);
 
-    const teamName = localStorage.getItem("r2_teamName") || "Unknown Team";
+    const teamName = getActiveTeam() || "Unknown Team";
     const totalTimeUsed = TIME_LIMIT - sess.timeLeft;
     const finalScore = sess.score + 5;
     const timeFmt = fmtTime(totalTimeUsed);

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import "./RegisterTeam.css";
 import { useNavigate } from "react-router-dom";
+import { setActiveTeam } from "../utils/teamSession";
 
 const RegisterTeam = () => {
     const [formData, setFormData] = useState({
@@ -30,9 +31,10 @@ const RegisterTeam = () => {
     };
     const navigate = useNavigate();
     const confirmSubmit = async () => {
+        const teamName = formData.teamName.trim();
         const payload = {
             event: "Next Node",
-            teamName: formData.teamName,
+            teamName,
             players: [
                 { name: formData.player1 },
                 { name: formData.player2 },
@@ -54,11 +56,11 @@ const RegisterTeam = () => {
                 alert(data.message);
                 return;
             }
-            localStorage.setItem("teamName", formData.teamName);
+            setActiveTeam(teamName);
             // ✅ Redirect after success
             // navigate("/round1");
             navigate("/round1", {
-                state: { teamName: formData.teamName }
+                state: { teamName }
             });
 
         } catch (err) {

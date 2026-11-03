@@ -5,7 +5,12 @@ const router = express.Router();
 
 router.post("/round2", async (req, res) => {
   try {
-    const { teamName, phase, timeLeft, overallTimeUsed, score, solvedQuestions, finalSolved } = req.body;
+    const { phase, timeLeft, overallTimeUsed, score, solvedQuestions, finalSolved } = req.body;
+    const teamName = typeof req.body.teamName === "string" ? req.body.teamName.trim() : "";
+
+    if (!teamName) {
+      return res.status(400).json({ message: "Team name is required" });
+    }
 
     let session = await Round2.findOne({ teamName });
 

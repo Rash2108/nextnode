@@ -8,7 +8,12 @@ const router = express.Router();
  */
 router.post("/round1", async (req, res) => {
   try {
-    const { teamName, phase, authed, attempts, timeLeft, attemptStart, chosen, timedOut, finalCode, attemptLog, finalScore } = req.body;
+    const { phase, authed, attempts, timeLeft, attemptStart, chosen, timedOut, finalCode, attemptLog, finalScore } = req.body;
+    const teamName = typeof req.body.teamName === "string" ? req.body.teamName.trim() : "";
+
+    if (!teamName) {
+      return res.status(400).json({ message: "Team name is required" });
+    }
 
     let session = await Round1.findOne({ teamName });
 
@@ -29,7 +34,7 @@ router.post("/round1", async (req, res) => {
         phase: phase || "start",
         authed: authed !== undefined ? authed : true,
         attempts: attempts || 0,
-        timeLeft: timeLeft !== undefined ? timeLeft : 300,
+        timeLeft: timeLeft !== undefined ? timeLeft : "30:00",
         attemptStart: attemptStart || Date.now(),
         chosen: chosen || [],
         timedOut: timedOut || false,
@@ -50,11 +55,14 @@ router.post("/round1", async (req, res) => {
 /**
  * ✅ 2. Get Session
  */
-router.get("/round1/:userId", async (req, res) => {
+router.get("/round1/:teamName", async (req, res) => {
   try {
-    const session = await Round1.findOne({
-      userId: req.params.userId,
-    });
+    const teamName = typeof req.params.teamName === "string" ? req.params.teamName.trim() : "";
+    if (!teamName) {
+      return res.status(400).json({ message: "Team name is required" });
+    }
+
+    const session = await Round1.findOne({ teamName });
 
     if (!session) {
       return res.status(404).json({ message: "Session not found" });
@@ -71,9 +79,15 @@ router.get("/round1/:userId", async (req, res) => {
  */
 router.post("/round1/attempt", async (req, res) => {
   try {
-    const { userId, answer } = req.body;
+    const { answer } = req.body;
+    const rawTeamName = req.body.teamName || req.body.userId;
+    const teamName = typeof rawTeamName === "string" ? rawTeamName.trim() : "";
 
-    const session = await Round1.findOne({ userId });
+    if (!teamName) {
+      return res.status(400).json({ message: "Team name is required" });
+    }
+
+    const session = await Round1.findOne({ teamName });
 
     if (!session) {
       return res.status(404).json({ message: "Session not found" });
@@ -117,9 +131,15 @@ router.post("/round1/attempt", async (req, res) => {
  */
 router.put("/round1/update", async (req, res) => {
   try {
-    const { userId, chosen, timeLeft, timedOut } = req.body;
+    const { chosen, timeLeft, timedOut } = req.body;
+    const rawTeamName = req.body.teamName || req.body.userId;
+    const teamName = typeof rawTeamName === "string" ? rawTeamName.trim() : "";
 
-    const session = await Round1.findOne({ userId });
+    if (!teamName) {
+      return res.status(400).json({ message: "Team name is required" });
+    }
+
+    const session = await Round1.findOne({ teamName });
 
     if (!session) {
       return res.status(404).json({ message: "Session not found" });
